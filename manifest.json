@@ -1,10 +1,16 @@
 {
-  "name": "Mistral Text Correction (Simple)",
-  "id": "mistral-text-correction-simple",
+  "name": "Исправлятор 2000",
+  "id": "mik_ai-text-correction-simple",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
+  "menu": [
+    {
+      "name": "Исправлятор 2000",
+      "command": "open-plugin"
+    }
+  ],
   "networkAccess": {
     "allowedDomains": ["https://api.mistral.ai"],
     "reasoning": "Нужно для отправки текста на API Mistral и получения ответа.",
