@@ -1,0 +1,13 @@
+{
+  "name": "Mistral Text Correction (Simple)",
+  "id": "mistral-text-correction-simple",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["https://api.mistral.ai"],
+    "reasoning": "Нужно для отправки текста на API Mistral и получения ответа.",
+    "devAllowedDomains": ["http://localhost:5500"]
+  }
+}

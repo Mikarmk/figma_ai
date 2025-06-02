@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Исправление текста через Mistral.ai</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Arial, sans-serif;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+    #inputText {
+      width: 100%;
+      height: 200px;
+      padding: 8px;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #controls {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #correctBtn {
+      padding: 8px 16px;
+      font-size: 14px;
+      background-color: #18a0fb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #correctBtn:disabled {
+      background-color: #aacde8;
+      cursor: default;
+    }
+    #status {
+      font-size: 13px;
+      color: #555;
+    }
+    /* Скрытый iframe для CORS-прокси */
+    #proxyFrame {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Исправление текста через Mistral.ai</h2>
+  <textarea id="inputText" placeholder="Тут будет текст из Figma..."></textarea>
+  <div id="controls">
+    <button id="correctBtn" disabled>Исправить</button>
+    <div id="status"></div>
+  </div>
+
+  <!-- Иframe, который загружается в фоне для выполнения запроса -->
+  <iframe id="proxyFrame"></iframe>
+
+  <script>
+    const inputText = document.getElementById("inputText");
+    const correctBtn = document.getElementById("correctBtn");
+    const statusDiv = document.getElementById("status");
+    const proxyFrame = document.getElementById("proxyFrame");
+
+    // 1) Получаем первоначальный текст из code.js
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (msg.type === "load-text") {
+        inputText.value = msg.text;
+        correctBtn.disabled = false;
+      }
+    };
+
+    // 2) Когда пользователь нажал «Исправить»
+    correctBtn.onclick = () => {
+      const userText = inputText.value.trim();
+      if (!userText) return;
+
+      // Блокируем кнопку и показываем статус
+      correctBtn.disabled = true;
+      statusDiv.textContent = "⏳ Обработка...";
+
+      // Передаём текст в proxy.html через параметр URL
+      const encoded = encodeURIComponent(userText);
+      proxyFrame.src = `http://localhost:5500/proxy.html?text=${encoded}`;
+    };
+
+    // 3) Ловим ответ от proxy.html
+    window.addEventListener("message", (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === "corrected-text") {
+        // Получили исправленный текст
+        inputText.value = msg.text;
+        statusDiv.textContent = "✅ Готово";
+
+        // Шлём обратно в code.js команду «применить текст»
+        parent.postMessage({ pluginMessage: { type: "apply-corrected", text: msg.text } }, "*");
+      } else if (msg.type === "error") {
+        statusDiv.textContent = "❌ Ошибка: " + msg.message;
+        correctBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
