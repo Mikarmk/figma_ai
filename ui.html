@@ -4,60 +4,162 @@
   <meta charset="UTF-8" />
   <title>Исправление текста через Mik AI</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    
     body {
       margin: 0;
-      padding: 16px;
-      font-family: Arial, sans-serif;
-    }
-    h2 {
-      margin-top: 0;
-      font-size: 18px;
-    }
-    #inputText {
-      width: 100%;
-      height: 200px;
-      padding: 8px;
-      font-size: 14px;
-      resize: vertical;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    #controls {
-      margin-top: 12px;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background: #ffffff;
+      height: 100vh;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      color: #1d1d1f;
     }
+    
+    .container {
+      padding: 40px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    
+    #inputText {
+      flex: 1;
+      width: 100%;
+      padding: 20px;
+      font-size: 17px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      line-height: 1.5;
+      resize: none;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      background: #ffffff;
+      transition: border-color 0.2s ease;
+      outline: none;
+    }
+    
+    #inputText:focus {
+      border-color: #007aff;
+    }
+    
+    #inputText::placeholder {
+      color: #86868b;
+    }
+    
+    #controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    
     #correctBtn {
-      padding: 8px 16px;
-      font-size: 14px;
-      background-color: #18a0fb;
+      padding: 16px 32px;
+      font-size: 17px;
+      font-weight: 500;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: #007aff;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 12px;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
+    
+    #correctBtn:hover {
+      background: #0056cc;
+    }
+    
+    #correctBtn:active {
+      transform: scale(0.98);
+    }
+    
     #correctBtn:disabled {
-      background-color: #aacde8;
-      cursor: default;
+      background: #d2d2d7;
+      color: #86868b;
+      cursor: not-allowed;
+      transform: none;
     }
+    
+    #correctBtn:disabled:hover {
+      background: #d2d2d7;
+    }
+    
     #status {
-      font-size: 13px;
-      color: #555;
+      font-size: 15px;
+      font-weight: 400;
+      color: #86868b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    
+    .status-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    
+    .status-processing {
+      background: #ff9500;
+      color: white;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-success {
+      background: #30d158;
+      color: white;
+    }
+    
+    .status-error {
+      background: #ff3b30;
+      color: white;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
     /* Скрытый iframe для CORS-прокси */
     #proxyFrame {
       display: none;
     }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      
+      #inputText {
+        padding: 16px;
+        font-size: 16px;
+      }
+      
+      #correctBtn {
+        padding: 14px 28px;
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>Исправление текста от Mik AI</h2>
-  <textarea id="inputText" placeholder="Тут будет текст из Figma..."></textarea>
-  <div id="controls">
-    <button id="correctBtn" disabled>Исправить</button>
-    <div id="status"></div>
+  <div class="container">
+    <textarea id="inputText" placeholder="Введите текст для исправления..."></textarea>
+    
+    <div id="controls">
+      <button id="correctBtn" disabled>Исправить</button>
+      <div id="status"></div>
+    </div>
   </div>
 
   <!-- Иframe, который загружается в фоне для выполнения запроса -->
@@ -69,14 +171,49 @@
     const statusDiv = document.getElementById("status");
     const proxyFrame = document.getElementById("proxyFrame");
 
+    // Функция для обновления статуса
+    function updateStatus(text, type = 'default') {
+      statusDiv.innerHTML = '';
+      
+      if (type !== 'default') {
+        const icon = document.createElement('div');
+        icon.className = `status-icon status-${type}`;
+        
+        if (type === 'processing') {
+          icon.textContent = '●';
+        } else if (type === 'success') {
+          icon.textContent = '✓';
+        } else if (type === 'error') {
+          icon.textContent = '✕';
+        }
+        
+        statusDiv.appendChild(icon);
+      }
+      
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text;
+      statusDiv.appendChild(textSpan);
+    }
+
     // 1) Получаем первоначальный текст из code.js
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (msg.type === "load-text") {
         inputText.value = msg.text;
         correctBtn.disabled = false;
+        updateStatus("Готов к исправлению");
       }
     };
+
+    // Добавляем обработчик для включения кнопки при вводе текста
+    inputText.addEventListener('input', () => {
+      const hasText = inputText.value.trim().length > 0;
+      correctBtn.disabled = !hasText;
+      
+      if (hasText && statusDiv.textContent === '') {
+        updateStatus("Готов к исправлению");
+      }
+    });
 
     // 2) Когда пользователь нажал «Исправить»
     correctBtn.onclick = () => {
@@ -85,7 +222,7 @@
 
       // Блокируем кнопку и показываем статус
       correctBtn.disabled = true;
-      statusDiv.textContent = "⏳ Обработка...";
+      updateStatus("Обработка...", "processing");
 
       // Передаём текст в proxy.html через параметр URL
       const encoded = encodeURIComponent(userText);
@@ -100,13 +237,27 @@
       if (msg.type === "corrected-text") {
         // Получили исправленный текст
         inputText.value = msg.text;
-        statusDiv.textContent = "✅ Готово";
+        updateStatus("Готово", "success");
+
+        // Включаем кнопку обратно
+        setTimeout(() => {
+          correctBtn.disabled = false;
+        }, 500);
 
         // Шлём обратно в code.js команду «применить текст»
         parent.postMessage({ pluginMessage: { type: "apply-corrected", text: msg.text } }, "*");
       } else if (msg.type === "error") {
-        statusDiv.textContent = "❌ Ошибка: " + msg.message;
+        updateStatus(`Ошибка: ${msg.message}`, "error");
         correctBtn.disabled = false;
+      }
+    });
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', () => {
+      // Проверяем, есть ли уже текст
+      if (inputText.value.trim()) {
+        correctBtn.disabled = false;
+        updateStatus("Готов к исправлению");
       }
     });
   </script>
