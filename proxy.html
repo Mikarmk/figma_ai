@@ -7,15 +7,12 @@
 <body>
   <script>
     (async () => {
-      // 1) Считываем параметр text из URL
       const params = new URLSearchParams(window.location.search);
       const userText = params.get("text") || "";
 
-      // 2) Подготовка к запросу
-      const apiKey = "qmnavu5eu9jIgk0rFLdJKciCuSOjgJTH"; // ваш ключ Mistral.ai
+      const apiKey = "qmnavu5eu9jIgk0rFLdJKciCuSOjgJTH"; // замените на свой ключ Mistral.ai он бесплатный)))))
       const apiUrl = "https://api.mistral.ai/v1/chat/completions";
 
-      // Собираем тело запроса с системным промптом для исправления текста
       const payload = {
         model: "mistral-large-latest",
         messages: [
@@ -43,7 +40,7 @@
       };
 
       try {
-        // 3) Выполняем fetch-запрос к Mistral.ai
+        // 3) Выполняем fetch запрос
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -58,10 +55,8 @@
         }
 
         const data = await response.json();
-        // Берём текст из первого варианта ответа
         const assistantText = data.choices[0].message.content;
 
-        // 4) Отправляем результат обратно в UI
         parent.postMessage({ pluginMessage: { type: "corrected-text", text: assistantText } }, "*");
       } catch (err) {
         parent.postMessage({ pluginMessage: { type: "error", message: err.message } }, "*");
