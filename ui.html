@@ -129,12 +129,10 @@
       50% { opacity: 0.6; }
     }
     
-    /* Скрытый iframe для CORS-прокси */
     #proxyFrame {
       display: none;
     }
     
-    /* Responsive design */
     @media (max-width: 768px) {
       .container {
         padding: 20px;
@@ -162,7 +160,6 @@
     </div>
   </div>
 
-  <!-- Иframe, который загружается в фоне для выполнения запроса -->
   <iframe id="proxyFrame"></iframe>
 
   <script>
@@ -195,7 +192,6 @@
       statusDiv.appendChild(textSpan);
     }
 
-    // 1) Получаем первоначальный текст из code.js
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (msg.type === "load-text") {
@@ -205,7 +201,6 @@
       }
     };
 
-    // Добавляем обработчик для включения кнопки при вводе текста
     inputText.addEventListener('input', () => {
       const hasText = inputText.value.trim().length > 0;
       correctBtn.disabled = !hasText;
@@ -215,36 +210,29 @@
       }
     });
 
-    // 2) Когда пользователь нажал «Исправить»
     correctBtn.onclick = () => {
       const userText = inputText.value.trim();
       if (!userText) return;
 
-      // Блокируем кнопку и показываем статус
       correctBtn.disabled = true;
       updateStatus("Обработка...", "processing");
 
-      // Передаём текст в proxy.html через параметр URL
       const encoded = encodeURIComponent(userText);
       proxyFrame.src = `http://localhost:5500/proxy.html?text=${encoded}`;
     };
 
-    // 3) Ловим ответ от proxy.html
     window.addEventListener("message", (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
       if (msg.type === "corrected-text") {
-        // Получили исправленный текст
         inputText.value = msg.text;
         updateStatus("Готово", "success");
 
-        // Включаем кнопку обратно
         setTimeout(() => {
           correctBtn.disabled = false;
         }, 500);
 
-        // Шлём обратно в code.js команду «применить текст»
         parent.postMessage({ pluginMessage: { type: "apply-corrected", text: msg.text } }, "*");
       } else if (msg.type === "error") {
         updateStatus(`Ошибка: ${msg.message}`, "error");
@@ -252,9 +240,7 @@
       }
     });
 
-    // Инициализация
     document.addEventListener('DOMContentLoaded', () => {
-      // Проверяем, есть ли уже текст
       if (inputText.value.trim()) {
         correctBtn.disabled = false;
         updateStatus("Готов к исправлению");
