@@ -52,41 +52,85 @@
     
     #controls {
       display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .button-row {
+      display: flex;
       justify-content: center;
       align-items: center;
-      gap: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     
-    #correctBtn {
-      padding: 16px 32px;
-      font-size: 17px;
+    .action-btn {
+      padding: 12px 20px;
+      font-size: 15px;
       font-weight: 500;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      background: #007aff;
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease;
+      min-width: 120px;
     }
     
-    #correctBtn:hover {
-      background: #0056cc;
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
-    #correctBtn:active {
+    .action-btn:active {
       transform: scale(0.98);
     }
     
-    #correctBtn:disabled {
-      background: #d2d2d7;
+    .action-btn:disabled {
+      background: #d2d2d7 !important;
       color: #86868b;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
     
-    #correctBtn:disabled:hover {
-      background: #d2d2d7;
+    .action-btn:disabled:hover {
+      background: #d2d2d7 !important;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    /* Цвета для разных кнопок */
+    .btn-fix {
+      background: #007aff;
+    }
+    
+    .btn-fix:hover:not(:disabled) {
+      background: #0056cc;
+    }
+    
+    .btn-improve {
+      background: #30d158;
+    }
+    
+    .btn-improve:hover:not(:disabled) {
+      background: #28a745;
+    }
+    
+    .btn-ux {
+      background: #ff9500;
+    }
+    
+    .btn-ux:hover:not(:disabled) {
+      background: #e6850e;
+    }
+    
+    .btn-continue {
+      background: #af52de;
+    }
+    
+    .btn-continue:hover:not(:disabled) {
+      background: #9a47c4;
     }
     
     #status {
@@ -129,10 +173,12 @@
       50% { opacity: 0.6; }
     }
     
+    /* Скрытый iframe для CORS-прокси */
     #proxyFrame {
       display: none;
     }
     
+    /* Responsive design */
     @media (max-width: 768px) {
       .container {
         padding: 20px;
@@ -143,30 +189,46 @@
         font-size: 16px;
       }
       
-      #correctBtn {
-        padding: 14px 28px;
-        font-size: 16px;
+      .action-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-width: 100px;
+      }
+      
+      .button-row {
+        gap: 8px;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <textarea id="inputText" placeholder="Введите текст для исправления..."></textarea>
+    <textarea id="inputText" placeholder="Введите текст для обработки..."></textarea>
     
     <div id="controls">
-      <button id="correctBtn" disabled>Исправить</button>
+      <div class="button-row">
+        <button id="fixBtn" class="action-btn btn-fix" disabled>Исправить ошибки</button>
+        <button id="improveBtn" class="action-btn btn-improve" disabled>Улучшить</button>
+        <button id="uxBtn" class="action-btn btn-ux" disabled>Улучшить UX</button>
+        <button id="continueBtn" class="action-btn btn-continue" disabled>Продолжить текст</button>
+      </div>
       <div id="status"></div>
     </div>
   </div>
 
+  <!-- Иframe, который загружается в фоне для выполнения запроса -->
   <iframe id="proxyFrame"></iframe>
 
   <script>
     const inputText = document.getElementById("inputText");
-    const correctBtn = document.getElementById("correctBtn");
+    const fixBtn = document.getElementById("fixBtn");
+    const improveBtn = document.getElementById("improveBtn");
+    const uxBtn = document.getElementById("uxBtn");
+    const continueBtn = document.getElementById("continueBtn");
     const statusDiv = document.getElementById("status");
     const proxyFrame = document.getElementById("proxyFrame");
+
+    const allButtons = [fixBtn, improveBtn, uxBtn, continueBtn];
 
     // Функция для обновления статуса
     function updateStatus(text, type = 'default') {
@@ -192,58 +254,107 @@
       statusDiv.appendChild(textSpan);
     }
 
+    // Функция для включения/выключения всех кнопок
+    function toggleButtons(enabled) {
+      allButtons.forEach(btn => {
+        btn.disabled = !enabled;
+      });
+    }
+
+    // 1) Получаем первоначальный текст из code.js
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (msg.type === "load-text") {
         inputText.value = msg.text;
-        correctBtn.disabled = false;
-        updateStatus("Готов к исправлению");
+        toggleButtons(true);
+        updateStatus("Выберите действие");
+      } else if (msg.type === "server-status") {
+        if (!msg.running) {
+          updateStatus("Сервер не запущен. Запустите start-server.sh или start-server.bat", "error");
+          toggleButtons(false);
+          
+          // Добавляем инструкции для пользователя
+          const instructions = document.createElement('div');
+          instructions.style.cssText = `
+            margin-top: 16px;
+            padding: 16px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+          `;
+          instructions.innerHTML = `
+            <strong>Как запустить сервер:</strong><br>
+            • <strong>Mac/Linux:</strong> Откройте терминал в папке плагина и выполните: <code>./start-server.sh</code><br>
+            • <strong>Windows:</strong> Откройте командную строку в папке плагина и выполните: <code>start-server.bat</code><br>
+            • <strong>Альтернативно:</strong> <code>npm start</code> (если установлен npm)
+          `;
+          
+          document.querySelector('.container').appendChild(instructions);
+        }
       }
     };
 
+    // Добавляем обработчик для включения кнопок при вводе текста
     inputText.addEventListener('input', () => {
       const hasText = inputText.value.trim().length > 0;
-      correctBtn.disabled = !hasText;
+      toggleButtons(hasText);
       
       if (hasText && statusDiv.textContent === '') {
-        updateStatus("Готов к исправлению");
+        updateStatus("Выберите действие");
       }
     });
 
-    correctBtn.onclick = () => {
+    // Функция для обработки нажатия кнопки
+    function handleButtonClick(actionType) {
       const userText = inputText.value.trim();
       if (!userText) return;
 
-      correctBtn.disabled = true;
+      // Блокируем все кнопки и показываем статус
+      toggleButtons(false);
       updateStatus("Обработка...", "processing");
 
+      // Передаём текст и тип действия в proxy.html через параметры URL
       const encoded = encodeURIComponent(userText);
-      proxyFrame.src = `http://localhost:5500/proxy.html?text=${encoded}`;
-    };
+      proxyFrame.src = `http://localhost:5500/proxy.html?text=${encoded}&action=${actionType}`;
+    }
 
+    // 2) Обработчики для каждой кнопки
+    fixBtn.onclick = () => handleButtonClick('fix');
+    improveBtn.onclick = () => handleButtonClick('improve');
+    uxBtn.onclick = () => handleButtonClick('ux');
+    continueBtn.onclick = () => handleButtonClick('continue');
+
+    // 3) Ловим ответ от proxy.html
     window.addEventListener("message", (event) => {
       const msg = event.data.pluginMessage;
       if (!msg) return;
 
       if (msg.type === "corrected-text") {
+        // Получили обработанный текст
         inputText.value = msg.text;
         updateStatus("Готово", "success");
 
+        // Включаем кнопки обратно
         setTimeout(() => {
-          correctBtn.disabled = false;
+          toggleButtons(true);
         }, 500);
 
+        // Шлём обратно в code.js команду «применить текст»
         parent.postMessage({ pluginMessage: { type: "apply-corrected", text: msg.text } }, "*");
       } else if (msg.type === "error") {
         updateStatus(`Ошибка: ${msg.message}`, "error");
-        correctBtn.disabled = false;
+        toggleButtons(true);
       }
     });
 
+    // Инициализация
     document.addEventListener('DOMContentLoaded', () => {
+      // Проверяем, есть ли уже текст
       if (inputText.value.trim()) {
-        correctBtn.disabled = false;
-        updateStatus("Готов к исправлению");
+        toggleButtons(true);
+        updateStatus("Выберите действие");
       }
     });
   </script>

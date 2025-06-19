@@ -1,0 +1,17 @@
+{
+  "name": "figma-text-corrector-plugin",
+  "version": "1.0.0",
+  "description": "Figma plugin for text correction using Mistral AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "server": "node start-server.js"
+  },
+  "keywords": ["figma", "plugin", "text", "correction", "ai"],
+  "author": "Mik AI",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -3,44 +3,113 @@
 <head>
   <meta charset="UTF-8" />
   <title>Proxy для Mistral.ai</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f172a;
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+    }
+
+    .header {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      font-size: 18px;
+      color: #34d399;
+      margin-bottom: 30px;
+    }
+
+    .description {
+      font-size: 16px;
+      color: #94a3b8;
+      max-width: 600px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
+  <div style="text-align: center;">
+    <div class="header">T-Bank</div>
+    <div class="status">Прокси-сервис работает</div>
+    <div class="description">
+      Эта страница является внутренним прокси для работы с API Mistral AI.<br/>
+      Используется в составе плагина для редактирования текста в Figma.
+    </div>
+  </div>
+
   <script>
     (async () => {
       const params = new URLSearchParams(window.location.search);
       const userText = params.get("text") || "";
+      const actionType = params.get("action") || "fix";
 
-      const apiKey = "qmnavu5eu9jIgk0rFLdJKciCuSOjgJTH"; // замените на свой ключ Mistral.ai он бесплатный)))))
+      const apiKey = "qmnavu5eu9jIgk0rFLdJKciCuSOjgJTH";
       const apiUrl = "https://api.mistral.ai/v1/chat/completions";
+
+      let systemPrompt = "";
+
+      switch (actionType) {
+        case "fix":
+          systemPrompt = `Ты корректор. Исправь ошибки в тексте: орфография, грамматика, пунктуация. 
+НЕ меняй стиль, структуру, порядок слов, смысл и авторскую подачу. 
+❗️ВАЖНО: Верни ТОЛЬКО исправленный текст. Никаких комментариев, пояснений или лишних слов.`;
+          break;
+
+        case "improve":
+          systemPrompt = `Ты редактор. Сделай текст лучше: улучшай стиль, читаемость, словарный запас, структуру. 
+Смысл, тональность и объем — сохранить. 
+❗️ВАЖНО: Верни ТОЛЬКО улучшенный текст. НЕ добавляй пояснений, вступлений или комментариев.`;
+          break;
+
+        case "ux":
+          systemPrompt = `Ты UX-писатель. Перепиши текст, чтобы он был проще, понятнее, дружелюбнее. 
+Сохрани суть и контекст. 
+❗️ВАЖНО: Верни ТОЛЬКО итоговый UX-текст. БЕЗ вступлений, пояснений и вопросов.`;
+          break;
+
+        case "continue":
+          systemPrompt = `Ты автор-продолжатель. Продолжи текст логично, в том же стиле и тоне. 
+Продолжение — до 50% от длины оригинала. Исходный текст оставь. 
+❗️ВАЖНО: Верни исходный текст + продолжение. НЕ добавляй комментариев или вводных фраз.`;
+          break;
+
+        default:
+          systemPrompt = `Ты помощник. Сделай, что требует запрос. 
+❗️ВАЖНО: Верни ТОЛЬКО итоговый текст, без комментариев или лишних слов.`;
+      }
 
       const payload = {
         model: "mistral-large-latest",
+        temperature: 0.2, // минимизируем "болтовню"
         messages: [
           {
             role: "system",
-            content: `Ты корректор текстов. Твоя задача — исправить только ошибки в тексте, НЕ МЕНЯЯ его содержание и структуру.
-
-ЧТО ИСПРАВЛЯТЬ:
-• Орфографические ошибки (опечатки, неправильное написание слов)
-• Грамматические ошибки (падежи, согласование, времена глаголов)
-• Пунктуацию (расставить запятые, точки, исправить знаки препинания)
-
-ЧТО НЕ МЕНЯТЬ:
-• Порядок слов и предложений
-• Стиль изложения автора
-• Длину текста
-• Смысл и содержание
-• Структуру текста
-• Авторские обороты речи
-
-ВАЖНО: Верни ТОЛЬКО исправленный текст без комментариев. Если в тексте нет ошибок, верни его точно как есть.`
+            content: systemPrompt
           },
-          { role: "user", content: userText }
+          {
+            role: "user",
+            content: userText
+          }
         ]
       };
 
       try {
-        // 3) Выполняем fetch запрос
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
